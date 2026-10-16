@@ -1,0 +1,12 @@
+build/
+dist/
+out/
+.vs/
+*.log
+FH2HeadTracking.ini
+# never commit game files
+*.exe
+*.dll
+*.xvd
+*.vbi
+Camera.zip
