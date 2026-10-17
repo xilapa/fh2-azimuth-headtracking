@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(fh2_azimuth_headtracking VERSION 0.3.0 LANGUAGES CXX)
+project(fh2_azimuth_headtracking VERSION 0.3.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -20,6 +20,7 @@ endif()
 add_library(FH2HeadTracking SHARED
   src/dll/dllmain.cpp
   src/dll/config.cpp
+  src/dll/config_file.cpp
   src/dll/tracker.cpp
   src/dll/hook.cpp)
 target_link_libraries(FH2HeadTracking PRIVATE ws2_32)
@@ -27,7 +28,7 @@ target_compile_definitions(FH2HeadTracking PRIVATE FH2HT_VERSION="${PROJECT_VERS
 set_target_properties(FH2HeadTracking PROPERTIES PREFIX "")
 
 # The launcher / injector
-add_executable(FH2HeadTrackingLauncher src/injector/injector.cpp)
+add_executable(FH2HeadTrackingLauncher src/injector/injector.cpp src/dll/config.cpp src/dll/config_file.cpp)
 set_target_properties(FH2HeadTrackingLauncher PROPERTIES OUTPUT_NAME FH2HeadTracking)
 target_link_libraries(FH2HeadTrackingLauncher PRIVATE psapi)
 if(MSVC)

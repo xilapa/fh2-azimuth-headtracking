@@ -1,6 +1,6 @@
 # FH2 Head Tracking for Azimuth
 
-**Status: 0.3.0. Tested in-game with Beam Eye Tracker (FreeTrack input).**
+**Status: 0.3.1. Tested in-game with Beam Eye Tracker (FreeTrack input).**
 
 Webcam head tracking for Forza Horizon 2 running in Azimuth. It drives the game's **own
 head-tracking camera layers**, the ones built for Kinect, with your head pose from
@@ -76,7 +76,7 @@ first run. Edit it, then restart the game.
 `FH2HeadTracking.log` is written next to the DLL. A good run looks like this:
 
 ```
-FH2 Head Tracking 0.3.0 loaded into pid ... (...\azimuth.exe)
+FH2 Head Tracking 0.3.1 loaded into pid ... (...\azimuth.exe)
 waiting for the Forza Horizon 2 image to be mapped...
 game image found at 0000...
 patch: 5 head-tracking inputs redirected (thunks at ...)

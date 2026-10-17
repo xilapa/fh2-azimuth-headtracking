@@ -11,6 +11,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include "../dll/config.h"
 
 static std::wstring selfDir() {
     wchar_t p[MAX_PATH];
@@ -67,6 +68,31 @@ static bool inject(DWORD pid, const std::wstring& dllPath) {
     return ok;
 }
 
+static std::wstring keyName(int vk) {
+    if (vk >= 0x70 && vk <= 0x7B) return L"F" + std::to_wstring(vk - 0x70 + 1);
+    if ((vk >= '0' && vk <= '9') || (vk >= 'A' && vk <= 'Z')) return std::wstring(1, (wchar_t)vk);
+    switch (vk) {
+    case VK_END: return L"End";
+    case VK_HOME: return L"Home";
+    case VK_PRIOR: return L"Page Up";
+    case VK_NEXT: return L"Page Down";
+    case VK_INSERT: return L"Insert";
+    case VK_DELETE: return L"Delete";
+    }
+    wchar_t hex[16]; swprintf(hex, 16, L"key 0x%02X", vk);
+    return hex;
+}
+
+// "End, Ctrl+Shift+Y, controller L3+R3" - whatever is set; "off" when nothing is.
+static std::wstring bindingText(int key, int chordKey, const wchar_t* buttons) {
+    std::wstring s;
+    auto add = [&](const std::wstring& t) { s += (s.empty() ? L"" : L", ") + t; };
+    if (key) add(keyName(key));
+    if (chordKey) add(L"Ctrl+Shift+" + keyName(chordKey));
+    if (buttons && *buttons) add(std::wstring(L"controller ") + buttons);
+    return s.empty() ? L"off" : s;
+}
+
 int wmain(int argc, wchar_t** argv) {
     setvbuf(stdout, nullptr, _IONBF, 0);
     std::wstring dll = selfDir() + L"\\FH2HeadTracking.dll";
@@ -75,9 +101,27 @@ int wmain(int argc, wchar_t** argv) {
         Sleep(5000);
         return 1;
     }
+    // Also writes the default INI if missing, so it can be edited before the game starts.
+    std::wstring ini = selfDir() + L"\\FH2HeadTracking.ini";
+    fh2::Config cfg = fh2::loadConfig(ini);
+    wchar_t buttons[128];
+    GetPrivateProfileStringW(L"Hotkeys", L"RecenterButtons", L"L3+R3", buttons, 128, ini.c_str());
+
     wprintf(L"FH2 Head Tracking for Azimuth\n");
-    wprintf(L"  OpenTrack output: UDP over network, 127.0.0.1 port 4242\n");
-    wprintf(L"  In game: End = toggle, Home = recenter. Log: FH2HeadTracking.log\n\n");
+    switch (cfg.source) {
+    case fh2::Source::Udp:
+        wprintf(L"  Input:    OpenTrack \"UDP over network\", %hs port %d\n", cfg.bindAddress.c_str(), cfg.udpPort);
+        break;
+    case fh2::Source::FreeTrack:
+        wprintf(L"  Input:    FreeTrack/TrackIR shared memory (Beam, or OpenTrack \"freetrack 2.0 Enhanced\")\n");
+        break;
+    default:
+        wprintf(L"  Input:    auto - FreeTrack/TrackIR shared memory when present,\n"
+                L"            otherwise OpenTrack \"UDP over network\", %hs port %d\n", cfg.bindAddress.c_str(), cfg.udpPort);
+    }
+    wprintf(L"  Toggle:   %ls\n", bindingText(cfg.toggleKey, cfg.chordToggleKey, nullptr).c_str());
+    wprintf(L"  Recenter: %ls\n", bindingText(cfg.recenterKey, cfg.chordRecenterKey, buttons).c_str());
+    wprintf(L"  Settings: %ls\n  Log:      FH2HeadTracking.log\n\n", ini.c_str());
 
     bool launched = false;
     if (argc > 1) {

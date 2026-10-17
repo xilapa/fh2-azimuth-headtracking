@@ -14,15 +14,13 @@ rm -rf build dist && mkdir -p build "$PKG"
 g++ -std=c++17 -O1 -Wall tests/test_pose.cpp -o build/test_pose && ./build/test_pose
 
 $CXX $FLAGS -DFH2HT_VERSION="\"$VERSION\"" -shared -o build/FH2HeadTracking.dll \
-    src/dll/dllmain.cpp src/dll/config.cpp src/dll/tracker.cpp src/dll/hook.cpp \
+    src/dll/dllmain.cpp src/dll/config.cpp src/dll/config_file.cpp src/dll/tracker.cpp src/dll/hook.cpp \
     -lws2_32 -Wl,--subsystem,windows
-$CXX $FLAGS -municode -o build/FH2HeadTracking.exe src/injector/injector.cpp -lpsapi
+$CXX $FLAGS -municode -o build/FH2HeadTracking.exe src/injector/injector.cpp src/dll/config.cpp src/dll/config_file.cpp -lpsapi
 # integration harness (needs your own copy of the game executable to run)
 $CXX $FLAGS -municode -mavx -o build/harness.exe tests/harness.cpp -lws2_32
 
 cp build/FH2HeadTracking.dll build/FH2HeadTracking.exe "$PKG"/
 cp README.md "$PKG"/README.md
-cp LICENSE "$PKG"/LICENSE.txt
-cp AUTHORS "$PKG"/AUTHORS.txt
 (cd dist && zip -qr "FH2HeadTracking-$VERSION.zip" FH2HeadTracking)
 echo "built dist/FH2HeadTracking-$VERSION.zip"
