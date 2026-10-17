@@ -144,6 +144,26 @@ float evaluate(uint8_t* L) {
     }
     if (!layerActive(cls)) return 0.0f;
 
+    // Guard against applying the offset twice in one frame: if a *different* layer of
+    // the same class was driven within the last 3 ms (same frame), this one is neutral.
+    {
+        static uint8_t* lastLayer[5] = {};
+        static int64_t  lastTick[5]  = {};
+        static bool     warned = false;
+        static const int64_t window = [] { LARGE_INTEGER f; QueryPerformanceFrequency(&f); return f.QuadPart * 3 / 1000; }();
+        LARGE_INTEGER now; QueryPerformanceCounter(&now);
+        if (lastLayer[cls] && lastLayer[cls] != L && now.QuadPart - lastTick[cls] < window) {
+            if (!warned) {
+                LOG("note: two %s layers evaluated in one frame (%p, %p); driving only the first",
+                    className(cls), (void*)lastLayer[cls], (void*)L);
+                warned = true;
+            }
+            return 0.0f;
+        }
+        lastLayer[cls] = L;
+        lastTick[cls] = now.QuadPart;
+    }
+
     CameraOffsets o;
     bool ok = Tracker::read(o);
     float* param = &at<float>(L, layer::kParam);

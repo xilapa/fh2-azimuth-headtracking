@@ -143,6 +143,11 @@ int wmain(int argc, wchar_t** argv) {
     Layer hood = makeLayer(31, 4, 15.0f);
     eval(&hood, &car, nullptr, 0.016f);
     CHECK(f(hood, 0) == 0.0f && f(hood, 0xE0) == 15.0f, "hood/bumper yaw layer untouched with CockpitOnly=1");
+    Layer rot2 = makeLayer(31, 4, 12.0f);
+    eval(&rot, &car, nullptr, 0.016f);
+    eval(&rot2, &car, nullptr, 0.016f);
+    CHECK(f(rot, 0) == 1.0f && f(rot2, 0) == 0.0f, "second cockpit rotation layer in the same frame is neutral");
+    Sleep(20);
 
     printf("updates and staleness:\n");
     sendPose(s, 0, 0, 0, -45.0, 0, 0); Sleep(100);
@@ -151,6 +156,25 @@ int wmain(int argc, wchar_t** argv) {
     Sleep(900);   // > StaleTimeoutMs
     eval(&rot, &car, nullptr, 0.016f);
     CHECK(f(rot, 0) == 0.0f, "stale tracker -> input 0, camera returns to rest");
+
+    printf("FreeTrack shared memory (Beam / TrackIR emulation):\n");
+    HANDLE map = CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, 4096, L"FT_SharedMem");
+    float* ft = (float*)MapViewOfFile(map, FILE_MAP_ALL_ACCESS, 0, 0, 4096);
+    uint32_t* id = (uint32_t*)ft;
+    // layout: DataID, CamW, CamH, Yaw, Pitch, Roll, X, Y, Z (radians, mm)
+    for (int i = 0; i < 75; ++i) {
+        ft[3] = -0.5f; ft[4] = 0.2f; ft[5] = 0.1f; ft[6] = 50.0f; ft[7] = -20.0f; ft[8] = 30.0f;
+        *id += 1;
+        sendPose(s, 0, 0, 0, 5.0, 0, 0);     // UDP keeps sending; FreeTrack must win
+        Sleep(20);
+    }
+    eval(&rot, &car, nullptr, 0.016f);
+    eval(&pos, &car, nullptr, 0.016f);
+    CHECK(f(rot, 0) == 1.0f && std::fabs(f(rot, 0xE0) - 28.6479f) < 0.01f, "FreeTrack yaw -0.5 rad -> +28.65 deg (got %f)", f(rot, 0xE0));
+    CHECK(std::fabs(f(rot, 0xE4) + 11.4592f) < 0.01f && std::fabs(f(rot, 0xE8) - 5.7296f) < 0.01f,
+          "FreeTrack pitch/roll converted (%f %f)", f(rot, 0xE4), f(rot, 0xE8));
+    CHECK(std::fabs(f(pos, 0xE0) - 0.05f) < 1e-4f && std::fabs(f(pos, 0xE4) + 0.02f) < 1e-4f && std::fabs(f(pos, 0xE8) - 0.03f) < 1e-4f,
+          "FreeTrack mm -> metres (%f %f %f)", f(pos, 0xE0), f(pos, 0xE4), f(pos, 0xE8));
 
     printf(failures ? "\n%d check(s) FAILED\n" : "\nall integration checks passed\n", failures);
     return failures ? 1 : 0;

@@ -5,7 +5,12 @@
 
 namespace fh2 {
 
+enum class Source { Auto, Udp, FreeTrack };
+
 struct Config {
+    // [Input]
+    Source source = Source::Auto;
+    bool   diagnostics = true;
     // [Network]
     int          udpPort = 4242;
     std::string  bindAddress = "127.0.0.1";

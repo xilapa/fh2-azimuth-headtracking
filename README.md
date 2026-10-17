@@ -1,6 +1,6 @@
 # FH2 Head Tracking for Azimuth
 
-**Status: 0.1.0, first test build. Not yet verified in-game.**
+**Status: 0.2.0, early test build. First in-game test worked; tuning in progress.**
 
 Webcam head tracking for Forza Horizon 2 running in Azimuth. It drives the game's **own
 head-tracking camera layers**, the ones built for Kinect, with your head pose from
@@ -33,11 +33,15 @@ are widened in memory.
 
 ## Install
 
-1. Install [OpenTrack](https://github.com/opentrack/opentrack/releases).
-   * **Input:** `neuralnet tracker`. In its options, pick your webcam.
-   * **Output:** `UDP over network`, address `127.0.0.1`, port `4242`.
-   * **Filter:** `Accela` (default) is a good start.
-   * Press **Start**. Bind a key to **Center** in OpenTrack's Options → Shortcuts.
+1. Set up a head tracker. Either of these works. When both are running, FreeTrack is used:
+   * **Beam Eye Tracker:** Game Connection → **Head Tracking Device Emulation**, with
+     Driver set to `Compatibility`. Beam then publishes the FreeTrack/TrackIR shared memory,
+     and the plugin reads it directly.
+   * **[OpenTrack](https://github.com/opentrack/opentrack/releases)** with a webcam:
+     * **Input:** `neuralnet tracker`.
+     * **Output:** `freetrack 2.0 Enhanced`, or `UDP over network` (`127.0.0.1`, port `4242`).
+     * **Filter:** `Accela`.
+     * Bind a key to **Center**.
 2. Unzip this folder anywhere **outside** the Azimuth folder, e.g. `C:\Games\FH2HeadTracking`.
 3. Start head tracking. Use either:
    * **A:** Double-click `FH2HeadTracking.exe`, then start Azimuth as usual. Leave the
@@ -96,6 +100,15 @@ Please send back the log and what each axis did. Reports from that first session
 decide what changes in 0.2.
 
 ## Troubleshooting
+
+* **The view moves much more than your head, or keeps turning after you face forward
+  (Beam):** Beam's "Immersive Camera" already amplifies head rotation and adds eye-gaze
+  extension, so the view keeps panning while your eyes rest near the edge of the screen.
+  Lower the camera sensitivity or turn off eye-based extension in Beam, or reduce
+  `YawGain`/`PitchGain` here.
+  With `Diagnostics=1`, the log shows what arrives every 2 seconds
+  (`diag freetrack: in yaw ...`). If `in yaw` keeps growing while your head is still, the
+  extra movement comes from the tracker.
 
 * **No log file:** the DLL was not loaded. Make sure FH2HeadTracking.exe was running
   before or while Azimuth started, and that antivirus did not block it.

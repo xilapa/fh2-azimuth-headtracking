@@ -8,6 +8,16 @@ namespace fh2 {
 static const char kDefaultIni[] =
 "; FH2 Head Tracking for Azimuth - settings. Edit, then restart the game.\n"
 "\n"
+"[Input]\n"
+"ConfigVersion=2\n"
+"; auto      = FreeTrack/TrackIR shared memory when present (Beam \"Head Tracking Device\n"
+";             Emulation\", OpenTrack \"freetrack 2.0 Enhanced\"), otherwise UDP\n"
+"; freetrack = shared memory only\n"
+"; udp       = OpenTrack \"UDP over network\" only\n"
+"Source=auto\n"
+"; 1 = write the received pose and the camera offsets to the log every 2 seconds\n"
+"Diagnostics=1\n"
+"\n"
 "[Network]\n"
 "; OpenTrack: Output = \"UDP over network\", address 127.0.0.1, port below.\n"
 "UdpPort=4242\n"
@@ -37,25 +47,25 @@ static const char kDefaultIni[] =
 "[Rotation]\n"
 "YawGain=1.0\n"
 "YawInvert=0\n"
-"YawLimit=150\n"
+"YawLimit=90\n"
 "PitchGain=1.0\n"
 "PitchInvert=0\n"
-"PitchLimit=60\n"
+"PitchLimit=40\n"
 "RollGain=1.0\n"
 "RollInvert=0\n"
-"RollLimit=30\n"
+"RollLimit=20\n"
 "\n"
 "[Position]\n"
 "Enabled=1\n"
 "XGain=1.0\n"
 "XInvert=0\n"
-"XLimit=0.25\n"
+"XLimit=0.10\n"
 "YGain=1.0\n"
 "YInvert=0\n"
-"YLimit=0.15\n"
+"YLimit=0.06\n"
 "ZGain=1.0\n"
 "ZInvert=0\n"
-"ZLimit=0.20\n"
+"ZLimit=0.08\n"
 "\n"
 "[Advanced]\n"
 "; Which component of the game's rotation Param receives yaw, pitch, roll (0,1,2).\n"
@@ -100,6 +110,13 @@ static AxisCfg readAxis(const wchar_t* ini, const char* sec, const char* name, f
 }
 
 Config loadConfig(const std::wstring& iniPath) {
+    if (GetFileAttributesW(iniPath.c_str()) != INVALID_FILE_ATTRIBUTES &&
+        GetPrivateProfileIntW(L"Input", L"ConfigVersion", 0, iniPath.c_str()) < 2) {
+        // Settings from 0.1.0: keep a backup, start from the new defaults.
+        std::wstring bak = iniPath + L".v1.bak";
+        MoveFileExW(iniPath.c_str(), bak.c_str(), MOVEFILE_REPLACE_EXISTING);
+        LOG("config: old settings file saved as FH2HeadTracking.ini.v1.bak, writing new defaults");
+    }
     if (GetFileAttributesW(iniPath.c_str()) == INVALID_FILE_ATTRIBUTES) {
         if (FILE* f = _wfopen(iniPath.c_str(), L"w")) {
             fputs(kDefaultIni, f);
@@ -109,6 +126,9 @@ Config loadConfig(const std::wstring& iniPath) {
     }
     const wchar_t* ini = iniPath.c_str();
     Config c;
+    std::string src = readStr(ini, "Input", "Source", "auto");
+    c.source = src == "udp" ? Source::Udp : src == "freetrack" ? Source::FreeTrack : Source::Auto;
+    c.diagnostics     = readI(ini, "Input", "Diagnostics", 1) != 0;
     c.udpPort         = readI(ini, "Network", "UdpPort", 4242);
     c.bindAddress     = readStr(ini, "Network", "BindAddress", "127.0.0.1");
     c.enableOnStartup = readI(ini, "General", "EnableOnStartup", 1) != 0;
@@ -119,15 +139,16 @@ Config loadConfig(const std::wstring& iniPath) {
     c.recenterKey      = readI(ini, "Hotkeys", "RecenterKey", VK_HOME);
     c.chordToggleKey   = readI(ini, "Hotkeys", "ChordToggleKey", 'Y');
     c.chordRecenterKey = readI(ini, "Hotkeys", "ChordRecenterKey", 'H');
-    c.map.yaw   = readAxis(ini, "Rotation", "Yaw", 150.0f);
-    c.map.pitch = readAxis(ini, "Rotation", "Pitch", 60.0f);
-    c.map.roll  = readAxis(ini, "Rotation", "Roll", 30.0f);
+    c.map.yaw   = readAxis(ini, "Rotation", "Yaw", 90.0f);
+    c.map.pitch = readAxis(ini, "Rotation", "Pitch", 40.0f);
+    c.map.roll  = readAxis(ini, "Rotation", "Roll", 20.0f);
     c.map.positionEnabled = readI(ini, "Position", "Enabled", 1) != 0;
-    c.map.x = readAxis(ini, "Position", "X", 0.25f);
-    c.map.y = readAxis(ini, "Position", "Y", 0.15f);
-    c.map.z = readAxis(ini, "Position", "Z", 0.20f);
+    c.map.x = readAxis(ini, "Position", "X", 0.10f);
+    c.map.y = readAxis(ini, "Position", "Y", 0.06f);
+    c.map.z = readAxis(ini, "Position", "Z", 0.08f);
     readOrder(ini, "RotOrder", c.map.rotOrder);
     readOrder(ini, "PosOrder", c.map.posOrder);
+    LOG("config: source %s diagnostics %d", src.c_str(), c.diagnostics);
     LOG("config: port %d bind %s enabled %d cockpitOnly %d smoothing %.2f",
         c.udpPort, c.bindAddress.c_str(), c.enableOnStartup, c.cockpitOnly, c.smoothing);
     LOG("config: yaw g%.2f i%d l%.0f  pitch g%.2f i%d l%.0f  roll g%.2f i%d l%.0f",

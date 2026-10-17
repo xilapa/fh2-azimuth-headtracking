@@ -7,7 +7,7 @@
 #include "log.h"
 #include "tracker.h"
 
-#define FH2HT_VERSION "0.1.0"
+#define FH2HT_VERSION "0.2.0"
 
 namespace {
 
