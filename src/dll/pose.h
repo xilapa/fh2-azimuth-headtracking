@@ -42,9 +42,10 @@ inline float applyAxis(double v, const AxisCfg& a) {
 
 inline CameraOffsets mapPose(const RawPose& p, const RawPose& center, const MapCfg& c) {
     CameraOffsets o;
+    // The game's camera pitch is positive downwards, OpenTrack's is positive up.
     float rot[3] = {
         applyAxis(p.yaw   - center.yaw,   c.yaw),
-        applyAxis(p.pitch - center.pitch, c.pitch),
+        -applyAxis(p.pitch - center.pitch, c.pitch),
         applyAxis(p.roll  - center.roll,  c.roll),
     };
     for (int i = 0; i < 3; ++i) o.rotDeg[c.rotOrder[i]] = rot[i];

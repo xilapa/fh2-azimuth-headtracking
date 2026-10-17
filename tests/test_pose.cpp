@@ -25,7 +25,7 @@ int main() {
     {
         RawPose p{10, -5, 3, 30, -10, 4};
         auto o = mapPose(p, zero, defaults());
-        assert(near(o.rotDeg[0], 30) && near(o.rotDeg[1], -10) && near(o.rotDeg[2], 4));
+        assert(near(o.rotDeg[0], 30) && near(o.rotDeg[1], 10) && near(o.rotDeg[2], 4));   // pitch flipped for the game
         assert(near(o.posM[0], 0.10f) && near(o.posM[1], -0.05f) && near(o.posM[2], 0.03f));
     }
     // limits clamp, limit 0 disables, invert flips, gain scales
@@ -35,7 +35,7 @@ int main() {
         RawPose p{40, 0, 0, 100, 20, 15};
         auto o = mapPose(p, zero, c);
         assert(near(o.rotDeg[0], 150));      // 200 clamped
-        assert(near(o.rotDeg[1], -20));
+        assert(near(o.rotDeg[1], 20));    // inverted, then flipped for the game
         assert(near(o.rotDeg[2], 0));
         assert(near(o.posM[0], 0.05f));
     }
@@ -53,7 +53,7 @@ int main() {
         c.posOrder[0] = 2; c.posOrder[1] = 1; c.posOrder[2] = 0;
         RawPose p{5, 0, -7, 20, 8, 0};
         auto o = mapPose(p, zero, c);
-        assert(near(o.rotDeg[1], 20) && near(o.rotDeg[0], 8));
+        assert(near(o.rotDeg[1], 20) && near(o.rotDeg[0], -8));
         assert(near(o.posM[2], 0.05f) && near(o.posM[0], -0.07f));
     }
     // position disabled

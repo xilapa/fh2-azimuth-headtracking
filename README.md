@@ -1,6 +1,6 @@
 # FH2 Head Tracking for Azimuth
 
-**Status: 0.2.0, early test build. First in-game test worked; tuning in progress.**
+**Status: 0.2.1, early test build. First in-game test worked; tuning in progress.**
 
 Webcam head tracking for Forza Horizon 2 running in Azimuth. It drives the game's **own
 head-tracking camera layers**, the ones built for Kinect, with your head pose from

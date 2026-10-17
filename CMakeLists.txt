@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(fh2_azimuth_headtracking VERSION 0.2.0 LANGUAGES CXX)
+project(fh2_azimuth_headtracking VERSION 0.2.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
