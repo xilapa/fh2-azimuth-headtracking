@@ -1,6 +1,6 @@
 # FH2 Head Tracking for Azimuth
 
-**Status: 0.2.1, early test build. First in-game test worked; tuning in progress.**
+**Status: 0.3.0. Tested in-game with Beam Eye Tracker (FreeTrack input).**
 
 Webcam head tracking for Forza Horizon 2 running in Azimuth. It drives the game's **own
 head-tracking camera layers**, the ones built for Kinect, with your head pose from
@@ -60,44 +60,46 @@ which is what injectors do. If it does, allow it, or use the ASI loader option b
 
 ## Controls
 
-| Action | Key | Chord |
-|---|---|---|
-| Toggle head tracking | `End` | `Ctrl+Shift+Y` |
-| Recenter (in game) | `Home` | `Ctrl+Shift+H` |
+| Action | Default |
+|---|---|
+| Recenter | **L3 + R3** on an Xbox controller (both sticks clicked together) |
+| Toggle head tracking | `End`, or `Ctrl+Shift+Y` |
 
-Both are remappable in `FH2HeadTracking.ini`. That file is created next to the DLL on the
+Both clicks also reach the game, as usual. You can also recenter in your tracker
+(Beam / OpenTrack). All of these are remappable in `FH2HeadTracking.ini`:
+* `RecenterButtons`, e.g. `BACK+START`.
+* `RecenterKey` / `ChordRecenterKey` to add a keyboard key. That file is created next to the DLL on the
 first run. Edit it, then restart the game.
 
-## First test: what to check
+## Checking that it works
 
 `FH2HeadTracking.log` is written next to the DLL. A good run looks like this:
 
 ```
-FH2 Head Tracking 0.1.0 loaded into pid ... (...\azimuth.exe)
-udp: listening on 127.0.0.1:4242
+FH2 Head Tracking 0.3.0 loaded into pid ... (...\azimuth.exe)
 waiting for the Forza Horizon 2 image to be mapped...
 game image found at 0000...
 patch: 5 head-tracking inputs redirected (thunks at ...)
-udp: tracking data flowing
+freetrack: shared memory found
+input: using freetrack
 layer ... input 31 output 4 Param.x 12.000 -> rotation (cockpit)
 layer ... input 28 output 2 Param.x 0.030 -> position (cockpit)
 ```
 
 The `layer ...` lines only appear once you are driving in cockpit view.
 
-Then calibrate one axis at a time (set the others' `Limit=0` if it helps):
+## Tuning
 
-1. **Yaw:** turn your head left. If the view turns right, set `YawInvert=1`.
-2. **Pitch:** look up. If the view tilts sideways instead, swap the order:
-   `RotOrder=0,2,1`. If it goes the wrong way, set `PitchInvert=1`.
-3. **Roll:** tilt your head. Same fixes, with `RollInvert`.
-4. **Position:** lean left/right, up/down and forward/back. Fix direction with
-   `XInvert`/`YInvert`/`ZInvert`, and swap axes with `PosOrder=`.
-5. Strength: most people want rotation larger than their actual head turn. Set it with
-   OpenTrack's Mapping curves (preferred), or with `YawGain` etc.
+The defaults have been tested with Beam. Use these settings if your tracker behaves
+differently:
 
-Please send back the log and what each axis did. Reports from that first session
-decide what changes in 0.2.
+* **Direction:** if an axis moves the wrong way, set its `Invert` to `1`: `YawInvert`,
+  `PitchInvert`, `RollInvert`, `XInvert`, `YInvert`, `ZInvert`. To swap axes, use
+  `RotOrder=` / `PosOrder=`.
+* **Strength:** set the curves in your tracker (Beam's sensitivity, or OpenTrack's Mapping
+  window), or use `YawGain`, `PitchGain` and so on here.
+* **Range:** `Limit` caps the camera movement. The defaults keep the view inside the
+  cabin. `Limit=0` turns an axis off.
 
 ## Troubleshooting
 
@@ -106,7 +108,7 @@ decide what changes in 0.2.
   extension, so the view keeps panning while your eyes rest near the edge of the screen.
   Lower the camera sensitivity or turn off eye-based extension in Beam, or reduce
   `YawGain`/`PitchGain` here.
-  With `Diagnostics=1`, the log shows what arrives every 2 seconds
+  Set `Diagnostics=1` and the log shows what arrives every 2 seconds
   (`diag freetrack: in yaw ...`). If `in yaw` keeps growing while your head is still, the
   extra movement comes from the tracker.
 
@@ -154,6 +156,16 @@ harness.exe "<game>\Mount\forza_durango_release_final.exe" build\FH2HeadTracking
 How the game was analysed, and every address and offset used, is documented in
 [docs/REVERSE_ENGINEERING.md](docs/REVERSE_ENGINEERING.md) and `src/dll/game_layout.h`.
 This repository contains no game code or data. Code is matched by hash and by an opcode skeleton.
+
+## Releases
+
+Releases are built by GitHub Actions. Run **Actions → Release → Run workflow**. Leave
+*version* empty to use the version from `CMakeLists.txt`. The workflow then:
+
+1. builds the plugin and launcher with mingw-w64,
+2. runs the unit tests,
+3. packages `FH2HeadTracking-<version>.zip`,
+4. creates the `v<version>` tag and a GitHub release.
 
 ## License
 

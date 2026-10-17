@@ -2,6 +2,7 @@
 #include "log.h"
 #include <cstdio>
 #include <cstdlib>
+#include <cctype>
 
 namespace fh2 {
 
@@ -9,14 +10,14 @@ static const char kDefaultIni[] =
 "; FH2 Head Tracking for Azimuth - settings. Edit, then restart the game.\n"
 "\n"
 "[Input]\n"
-"ConfigVersion=2\n"
+"ConfigVersion=3\n"
 "; auto      = FreeTrack/TrackIR shared memory when present (Beam \"Head Tracking Device\n"
 ";             Emulation\", OpenTrack \"freetrack 2.0 Enhanced\"), otherwise UDP\n"
 "; freetrack = shared memory only\n"
 "; udp       = OpenTrack \"UDP over network\" only\n"
 "Source=auto\n"
-"; 1 = write the received pose and the camera offsets to the log every 2 seconds\n"
-"Diagnostics=1\n"
+"; 1 = write the received pose and the camera offsets to the log every 2 seconds (troubleshooting)\n"
+"Diagnostics=0\n"
 "\n"
 "[Network]\n"
 "; OpenTrack: Output = \"UDP over network\", address 127.0.0.1, port below.\n"
@@ -36,10 +37,14 @@ static const char kDefaultIni[] =
 "[Hotkeys]\n"
 "; Windows virtual key codes in hex. End=0x23 Home=0x24 PgUp=0x21 PgDn=0x22 F1..F12=0x70..0x7B\n"
 "ToggleKey=0x23\n"
-"RecenterKey=0x24\n"
+"; Recenter is on the controller by default (see RecenterButtons). 0 = no key.\n"
+"RecenterKey=0\n"
 "; Same actions with Ctrl+Shift+<key>, for keyboards without a nav cluster.\n"
 "ChordToggleKey=0x59\n"
-"ChordRecenterKey=0x48\n"
+"ChordRecenterKey=0\n"
+"; Xbox controller buttons that recenter when pressed together, joined with +.\n"
+"; A B X Y LB RB L3 R3 BACK START UP DOWN LEFT RIGHT. Empty = off.\n"
+"RecenterButtons=L3+R3\n"
 "\n"
 "; Gain multiplies your head movement. Invert flips an axis. Limit caps the\n"
 "; camera offset (degrees for rotation, metres for position); Limit=0 turns\n"
@@ -72,6 +77,30 @@ static const char kDefaultIni[] =
 "RotOrder=0,1,2\n"
 "; Which car-space component receives head X, Y, Z (0,1,2).\n"
 "PosOrder=0,1,2\n";
+
+constexpr int kConfigVersion = 3;
+
+// "L3+R3" -> XINPUT_GAMEPAD_* mask
+static unsigned parseButtons(const std::string& spec) {
+    static const struct { const char* name; unsigned mask; } kNames[] = {
+        {"UP", 0x0001}, {"DOWN", 0x0002}, {"LEFT", 0x0004}, {"RIGHT", 0x0008},
+        {"START", 0x0010}, {"BACK", 0x0020}, {"L3", 0x0040}, {"R3", 0x0080},
+        {"LB", 0x0100}, {"RB", 0x0200}, {"A", 0x1000}, {"B", 0x2000}, {"X", 0x4000}, {"Y", 0x8000},
+    };
+    unsigned mask = 0;
+    size_t i = 0;
+    while (i < spec.size()) {
+        size_t j = spec.find('+', i);
+        if (j == std::string::npos) j = spec.size();
+        std::string tok;
+        for (size_t k = i; k < j; ++k) if (spec[k] != ' ') tok += (char)toupper((unsigned char)spec[k]);
+        bool known = tok.empty();
+        for (auto& n : kNames) if (tok == n.name) { mask |= n.mask; known = true; }
+        if (!known) LOG("config: unknown controller button '%s' in RecenterButtons", tok.c_str());
+        i = j + 1;
+    }
+    return mask;
+}
 
 static std::string readStr(const wchar_t* ini, const char* sec, const char* key, const char* def) {
     char buf[256];
@@ -111,11 +140,11 @@ static AxisCfg readAxis(const wchar_t* ini, const char* sec, const char* name, f
 
 Config loadConfig(const std::wstring& iniPath) {
     if (GetFileAttributesW(iniPath.c_str()) != INVALID_FILE_ATTRIBUTES &&
-        GetPrivateProfileIntW(L"Input", L"ConfigVersion", 0, iniPath.c_str()) < 2) {
-        // Settings from 0.1.0: keep a backup, start from the new defaults.
-        std::wstring bak = iniPath + L".v1.bak";
+        GetPrivateProfileIntW(L"Input", L"ConfigVersion", 0, iniPath.c_str()) < kConfigVersion) {
+        // Settings from an older version: keep a backup, start from the new defaults.
+        std::wstring bak = iniPath + L".old.bak";
         MoveFileExW(iniPath.c_str(), bak.c_str(), MOVEFILE_REPLACE_EXISTING);
-        LOG("config: old settings file saved as FH2HeadTracking.ini.v1.bak, writing new defaults");
+        LOG("config: settings from an older version saved as FH2HeadTracking.ini.old.bak, writing new defaults");
     }
     if (GetFileAttributesW(iniPath.c_str()) == INVALID_FILE_ATTRIBUTES) {
         if (FILE* f = _wfopen(iniPath.c_str(), L"w")) {
@@ -128,7 +157,7 @@ Config loadConfig(const std::wstring& iniPath) {
     Config c;
     std::string src = readStr(ini, "Input", "Source", "auto");
     c.source = src == "udp" ? Source::Udp : src == "freetrack" ? Source::FreeTrack : Source::Auto;
-    c.diagnostics     = readI(ini, "Input", "Diagnostics", 1) != 0;
+    c.diagnostics     = readI(ini, "Input", "Diagnostics", 0) != 0;
     c.udpPort         = readI(ini, "Network", "UdpPort", 4242);
     c.bindAddress     = readStr(ini, "Network", "BindAddress", "127.0.0.1");
     c.enableOnStartup = readI(ini, "General", "EnableOnStartup", 1) != 0;
@@ -136,9 +165,10 @@ Config loadConfig(const std::wstring& iniPath) {
     c.staleTimeoutMs  = readI(ini, "General", "StaleTimeoutMs", 500);
     c.smoothing       = readF(ini, "General", "Smoothing", 0.0);
     c.toggleKey        = readI(ini, "Hotkeys", "ToggleKey", VK_END);
-    c.recenterKey      = readI(ini, "Hotkeys", "RecenterKey", VK_HOME);
+    c.recenterKey      = readI(ini, "Hotkeys", "RecenterKey", 0);
     c.chordToggleKey   = readI(ini, "Hotkeys", "ChordToggleKey", 'Y');
-    c.chordRecenterKey = readI(ini, "Hotkeys", "ChordRecenterKey", 'H');
+    c.chordRecenterKey = readI(ini, "Hotkeys", "ChordRecenterKey", 0);
+    c.recenterButtons  = parseButtons(readStr(ini, "Hotkeys", "RecenterButtons", "L3+R3"));
     c.map.yaw   = readAxis(ini, "Rotation", "Yaw", 90.0f);
     c.map.pitch = readAxis(ini, "Rotation", "Pitch", 40.0f);
     c.map.roll  = readAxis(ini, "Rotation", "Roll", 20.0f);
@@ -148,7 +178,7 @@ Config loadConfig(const std::wstring& iniPath) {
     c.map.z = readAxis(ini, "Position", "Z", 0.08f);
     readOrder(ini, "RotOrder", c.map.rotOrder);
     readOrder(ini, "PosOrder", c.map.posOrder);
-    LOG("config: source %s diagnostics %d", src.c_str(), c.diagnostics);
+    LOG("config: source %s diagnostics %d recenter buttons 0x%04x", src.c_str(), c.diagnostics, c.recenterButtons);
     LOG("config: port %d bind %s enabled %d cockpitOnly %d smoothing %.2f",
         c.udpPort, c.bindAddress.c_str(), c.enableOnStartup, c.cockpitOnly, c.smoothing);
     LOG("config: yaw g%.2f i%d l%.0f  pitch g%.2f i%d l%.0f  roll g%.2f i%d l%.0f",

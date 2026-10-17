@@ -7,7 +7,9 @@
 #include "log.h"
 #include "tracker.h"
 
-#define FH2HT_VERSION "0.2.1"
+#ifndef FH2HT_VERSION   // set by the build from CMakeLists.txt project(VERSION)
+#define FH2HT_VERSION "dev"
+#endif
 
 namespace {
 

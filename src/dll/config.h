@@ -20,8 +20,9 @@ struct Config {
     int  staleTimeoutMs  = 500;
     double smoothing     = 0.0;      // 0..1
     // [Hotkeys] Windows virtual key codes
-    int toggleKey = VK_END, recenterKey = VK_HOME;
-    int chordToggleKey = 'Y', chordRecenterKey = 'H';   // used with Ctrl+Shift
+    int toggleKey = VK_END, recenterKey = 0;
+    int chordToggleKey = 'Y', chordRecenterKey = 0;     // used with Ctrl+Shift; 0 = none
+    unsigned recenterButtons = 0x00C0;                  // XInput mask, default L3+R3
     // Pose mapping
     MapCfg map;
 };

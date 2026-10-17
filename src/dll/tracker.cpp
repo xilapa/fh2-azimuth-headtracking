@@ -148,16 +148,45 @@ DWORD WINAPI freetrackThread(void*) {
 }
 
 // ------------------------------------------------------ monitor/hotkeys ----
-bool pressed(int vk) { return (GetAsyncKeyState(vk) & 0x8000) != 0; }
+bool pressed(int vk) { return vk > 0 && (GetAsyncKeyState(vk) & 0x8000) != 0; }
+
+// XInput is loaded dynamically and only read (button state), so it does not
+// interfere with Azimuth's own controller handling.
+struct XPad { DWORD packet; WORD buttons; BYTE lt, rt; SHORT lx, ly, rx, ry; };
+typedef DWORD (WINAPI *XInputGetStateFn)(DWORD, XPad*);
+
+XInputGetStateFn loadXInput() {
+    for (const wchar_t* dll : {L"xinput1_4.dll", L"xinput1_3.dll", L"xinput9_1_0.dll"}) {
+        if (HMODULE m = LoadLibraryW(dll)) {
+            if (auto fn = reinterpret_cast<XInputGetStateFn>(GetProcAddress(m, "XInputGetState"))) {
+                LOG("controller: using %ls for the recenter buttons", dll);
+                return fn;
+            }
+        }
+    }
+    LOG("controller: XInput not available, controller recenter disabled");
+    return nullptr;
+}
+
+bool padCombo(XInputGetStateFn get, unsigned mask) {
+    if (!get || !mask) return false;
+    for (DWORD i = 0; i < 4; ++i) {
+        XPad st{};
+        if (get(i, &st) == ERROR_SUCCESS && (st.buttons & mask) == mask) return true;
+    }
+    return false;
+}
 
 DWORD WINAPI monitorThread(void*) {
     bool prevToggle = false, prevRecenter = false;
     double lastDiag = 0;
+    XInputGetStateFn xinput = g_cfg.recenterButtons ? loadXInput() : nullptr;
     for (;;) {
         Sleep(15);
         bool chord = pressed(VK_CONTROL) && pressed(VK_SHIFT);
         bool toggle   = pressed(g_cfg.toggleKey)   || (chord && pressed(g_cfg.chordToggleKey));
-        bool recenter = pressed(g_cfg.recenterKey) || (chord && pressed(g_cfg.chordRecenterKey));
+        bool recenter = pressed(g_cfg.recenterKey) || (chord && pressed(g_cfg.chordRecenterKey)) ||
+                        padCombo(xinput, g_cfg.recenterButtons);
         if (toggle && !prevToggle) {
             bool e = !g_enabled.load();
             g_enabled = e;
