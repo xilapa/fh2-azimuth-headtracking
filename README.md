@@ -169,6 +169,10 @@ Releases are built by GitHub Actions. Run **Actions → Release → Run workflow
 
 ## License
 
-MIT, see [LICENSE](LICENSE). Forza Horizon 2 is a trademark of Microsoft. This project is
-unofficial and not affiliated with Microsoft, Playground Games, Turn 10 or Almost There Games
-(Azimuth).
+Public domain, under [The Unlicense](LICENSE). Anyone may use, copy, modify and
+distribute it for any purpose, with no conditions.
+
+Author: Dirceu da Silva Junior (see [AUTHORS](AUTHORS)).
+
+Forza Horizon 2 is a trademark of Microsoft. This project is unofficial and not affiliated
+with Microsoft, Playground Games, Turn 10 or Almost There Games (Azimuth).

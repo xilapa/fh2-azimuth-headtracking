@@ -23,5 +23,6 @@ $CXX $FLAGS -municode -mavx -o build/harness.exe tests/harness.cpp -lws2_32
 cp build/FH2HeadTracking.dll build/FH2HeadTracking.exe "$PKG"/
 cp README.md "$PKG"/README.md
 cp LICENSE "$PKG"/LICENSE.txt
+cp AUTHORS "$PKG"/AUTHORS.txt
 (cd dist && zip -qr "FH2HeadTracking-$VERSION.zip" FH2HeadTracking)
 echo "built dist/FH2HeadTracking-$VERSION.zip"
