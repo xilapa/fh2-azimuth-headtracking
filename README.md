@@ -42,13 +42,13 @@ are widened in memory.
      * **Output:** `freetrack 2.0 Enhanced`, or `UDP over network` (`127.0.0.1`, port `4242`).
      * **Filter:** `Accela`.
      * Bind a key to **Center**.
-2. Unzip this folder anywhere **outside** the Azimuth folder, e.g. `C:\Games\FH2HeadTracking`.
+2. Unzip this folder anywhere **outside** the Azimuth folder.
 3. Start head tracking. Use either:
    * **A:** Double-click `FH2HeadTracking.exe`, then start Azimuth as usual. Leave the
      window open while you play.
    * **B:** Drag `azimuth.exe` onto `FH2HeadTracking.exe`. It starts Azimuth and closes itself
      when Azimuth exits. A shortcut works too:
-     `FH2HeadTracking.exe "E:\XOne\Forza Horizon 2 Azimuth 0.9.10\azimuth-windows-0.9.10\azimuth.exe"`
+     `FH2HeadTracking.exe "<path to>\azimuth.exe"`
 4. Drive in the **cockpit camera**.
 
 Windows Defender may flag FH2HeadTracking.exe, because it loads a DLL into another process,
@@ -156,16 +156,6 @@ harness.exe "<game>\Mount\forza_durango_release_final.exe" build\FH2HeadTracking
 How the game was analysed, and every address and offset used, is documented in
 [docs/REVERSE_ENGINEERING.md](docs/REVERSE_ENGINEERING.md) and `src/dll/game_layout.h`.
 This repository contains no game code or data. Code is matched by hash and by an opcode skeleton.
-
-## Releases
-
-Releases are built by GitHub Actions. Run **Actions → Release → Run workflow**. Leave
-*version* empty to use the version from `CMakeLists.txt`. The workflow then:
-
-1. builds the plugin and launcher with mingw-w64,
-2. runs the unit tests,
-3. packages `FH2HeadTracking-<version>.zip`,
-4. creates the `v<version>` tag and a GitHub release.
 
 ## License
 

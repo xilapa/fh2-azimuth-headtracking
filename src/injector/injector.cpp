@@ -1,7 +1,7 @@
 // FH2HeadTracking.exe - loads FH2HeadTracking.dll into Azimuth.
 //
 //   FH2HeadTracking.exe                       watch: inject into any azimuth.exe that starts
-//   FH2HeadTracking.exe "E:\...\azimuth.exe"  start Azimuth, inject, exit when it closes
+//   FH2HeadTracking.exe "<path to>\azimuth.exe"  start Azimuth, inject, exit when it closes
 //
 // Nothing is written to the Azimuth or game folders.
 #include <windows.h>
